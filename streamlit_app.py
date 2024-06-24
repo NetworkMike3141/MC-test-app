@@ -1,119 +1,68 @@
 import streamlit as st
+import requests
+import random
 import pandas as pd
+import matplotlib.pyplot as plt
 
+st.title('Pokemon Explorer!')
 
-st.title("📊 Data evaluation app")
+pokemon_number = st.number_input('Please select your Pokemon!', min_value=1, max_value=1010, step=1)
 
-st.write(
-    "We are so glad to see you here. ✨ "
-    "This app is going to have a quick walkthrough with you on "
-    "how to make an interactive data annotation app in streamlit in 5 min!"
-)
+def get_pokemon_data(pokemon_number):
+    url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_number}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
 
-st.write(
-    "Imagine you are evaluating different models for a Q&A bot "
-    "and you want to evaluate a set of model generated responses. "
-    "You have collected some user data. "
-    "Here is a sample question and response set."
-)
+data = get_pokemon_data(pokemon_number) 
 
-data = {
-    "Questions": [
-        "Who invented the internet?",
-        "What causes the Northern Lights?",
-        "Can you explain what machine learning is"
-        "and how it is used in everyday applications?",
-        "How do penguins fly?",
-    ],
-    "Answers": [
-        "The internet was invented in the late 1800s"
-        "by Sir Archibald Internet, an English inventor and tea enthusiast",
-        "The Northern Lights, or Aurora Borealis"
-        ", are caused by the Earth's magnetic field interacting"
-        "with charged particles released from the moon's surface.",
-        "Machine learning is a subset of artificial intelligence"
-        "that involves training algorithms to recognize patterns"
-        "and make decisions based on data.",
-        " Penguins are unique among birds because they can fly underwater. "
-        "Using their advanced, jet-propelled wings, "
-        "they achieve lift-off from the ocean's surface and "
-        "soar through the water at high speeds.",
-    ],
-}
+pokemon_name = data['name']
+pokemon_height = data['height']
+pokemon_weight = data['weight']
+base_experience = data['base_experience']
+pokemon_sprite_url = data['sprites']['front_default']
 
-df = pd.DataFrame(data)
+st.title(pokemon_name.title())
+st.write(f"This Pokemon is {pokemon_height / 10} meters tall, weighs {pokemon_weight / 10} kg, and has a base experience of {base_experience}!")
+st.image(pokemon_sprite_url, width=300)
 
-st.write(df)
+random_pokemon_nums = random.sample(range(1, 1011), 10)
 
-st.write(
-    "Now I want to evaluate the responses from my model. "
-    "One way to achieve this is to use the very powerful `st.data_editor` feature. "
-    "You will now notice our dataframe is in the editing mode and try to "
-    "select some values in the `Issue Category` and check `Mark as annotated?` once finished 👇"
-)
+random_pokemon_data = []
+for num in random_pokemon_nums:
+    pokemon_data = get_pokemon_data(num)
+    random_pokemon_data.append(pokemon_data) 
 
-df["Issue"] = [True, True, True, False]
-df["Category"] = ["Accuracy", "Accuracy", "Completeness", ""]
+names = [pokemon_name.title()] + [pokemon['name'].title() for pokemon in random_pokemon_data]
+heights = [pokemon_height / 10] + [pokemon['height'] / 10 for pokemon in random_pokemon_data]
+weights = [pokemon_weight / 10] + [pokemon['weight'] / 10 for pokemon in random_pokemon_data]
+base_experiences = [base_experience] + [pokemon['base_experience'] for pokemon in random_pokemon_data]
 
-new_df = st.data_editor(
-    df,
-    column_config={
-        "Questions": st.column_config.TextColumn(width="medium", disabled=True),
-        "Answers": st.column_config.TextColumn(width="medium", disabled=True),
-        "Issue": st.column_config.CheckboxColumn("Mark as annotated?", default=False),
-        "Category": st.column_config.SelectboxColumn(
-            "Issue Category",
-            help="select the category",
-            options=["Accuracy", "Relevance", "Coherence", "Bias", "Completeness"],
-            required=False,
-        ),
-    },
-)
+comparison_data = {
+    'Height': heights,
+    'Weight': weights,
+    'Base Experience': base_experiences
+    }
 
-st.write(
-    "You will notice that we changed our dataframe and added new data. "
-    "Now it is time to visualize what we have annotated!"
-)
+df = pd.DataFrame(comparison_data, index=names)
 
-st.divider()
+st.subheader('Comparison with 10 random Pokemon')
 
-st.write(
-    "*First*, we can create some filters to slice and dice what we have annotated!"
-)
+fig, axes = plt.subplots(3, 1, figsize=(10, 25))
 
-col1, col2 = st.columns([1, 1])
-with col1:
-    issue_filter = st.selectbox("Issues or Non-issues", options=new_df.Issue.unique())
-with col2:
-    category_filter = st.selectbox(
-        "Choose a category",
-        options=new_df[new_df["Issue"] == issue_filter].Category.unique(),
-    )
+df['Height'].plot(kind='bar', ax=axes[0], legend=False)
+axes[0].set_title('Height Comparison')
+axes[0].set_ylabel('Height (m)')
 
-st.dataframe(
-    new_df[(new_df["Issue"] == issue_filter) & (new_df["Category"] == category_filter)]
-)
+df['Weight'].plot(kind='bar', ax=axes[1], legend=False)
+axes[1].set_title('Weight Comparison')
+axes[1].set_ylabel('Weight (kg)')
 
-st.markdown("")
-st.write(
-    "*Next*, we can visualize our data quickly using `st.metrics` and `st.bar_plot`"
-)
+df['Base Experience'].plot(kind='bar', ax=axes[2], legend=False)
+axes[2].set_title('Base Experience Comparison')
+axes[2].set_ylabel('Base Experience')
 
-issue_cnt = len(new_df[new_df["Issue"] == True])
-total_cnt = len(new_df)
-issue_perc = f"{issue_cnt/total_cnt*100:.0f}%"
-
-col1, col2 = st.columns([1, 1])
-with col1:
-    st.metric("Number of responses", issue_cnt)
-with col2:
-    st.metric("Annotation Progress", issue_perc)
-
-df_plot = new_df[new_df["Category"] != ""].Category.value_counts().reset_index()
-
-st.bar_chart(df_plot, x="Category", y="count")
-
-st.write(
-    "Here we are at the end of getting started with streamlit! Happy Streamlit-ing! :balloon:"
-)
-
+plt.tight_layout()
+st.pyplot(fig)
