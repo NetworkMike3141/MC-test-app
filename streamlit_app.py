@@ -24,6 +24,7 @@ pokemon_weight = data['weight']
 base_experience = data['base_experience']
 pokemon_sprite_url = data['sprites']['front_default']
 
+
 st.title(pokemon_name.title())
 st.write(f"This Pokemon is {pokemon_height / 10} meters tall, weighs {pokemon_weight / 10} kg, and has a base experience of {base_experience}!")
 st.image(pokemon_sprite_url, width=300)
