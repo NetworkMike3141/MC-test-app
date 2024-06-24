@@ -18,6 +18,7 @@ def get_pokemon_data(pokemon_number):
 
 data = get_pokemon_data(pokemon_number) 
 
+
 pokemon_name = data['name']
 pokemon_height = data['height']
 pokemon_weight = data['weight']
